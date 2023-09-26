@@ -91,7 +91,7 @@ class JSONFileManager:
         with open(self.filename, 'w', encoding='utf-8') as file:
             file.write(json.dumps(data, ensure_ascii=False, indent=4))
 
-    def get_vacancies_by_keyword(self, keyword: dict):
+    def get_vacancies_by_keyword(self, keyword: int):
         """
         Переопределяем метод для получения вакансий по ключевому слову
         :param keyword: словарь с ключевыми словами для поиска
@@ -102,14 +102,10 @@ class JSONFileManager:
         data = json.loads(data_for_filter)
         list_of_vac = []
         for vacancy in data:
-            indicator = True
-            for k,v in keyword.items():
-                if k == 'salary_input':
-                    if vacancy['salary_from'] < v:
-                        indicator = False
-                        break
-            if indicator:
-                list_of_vac.append(vacancy)
+            if keyword == 'salary_input':
+                if vacancy['salary_from'] < keyword:
+                    list_of_vac.append(vacancy)
+                    break
         return list_of_vac
 
     def get_list_vacancies(self):

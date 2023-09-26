@@ -103,7 +103,7 @@ class JSONFileManager:
         list_of_vac = []
         for vacancy in data:
             indicator = True
-            for k, v in keyword.items():
+            for k,v in keyword.items():
                 if k == 'salary_input':
                     if vacancy['salary_from'] < v:
                         indicator = False

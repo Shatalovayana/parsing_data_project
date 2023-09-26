@@ -1,7 +1,6 @@
 import os
 from abc import ABC, abstractmethod
 import requests
-import json
 from vacancies import Vacancy
 
 
@@ -19,10 +18,9 @@ class APIManager(ABC):
         pass
 
     @abstractmethod
-    def format_data(self, response):
+    def format_data(self):
         """
         Форматирует полученные по АПИ данные в единый формат
-        :param response: данные из функции get_vacancies
         :return: vacancies: список вакансий в требуемом нам виде
         """
         pass
@@ -32,6 +30,7 @@ class HHAPIManager(APIManager):
     """
     Класс для работы с данными с сайта Hh.ru
     """
+
     def __init__(self, keyword):
         """
         Конструктор класса HHAPIManager
@@ -44,24 +43,31 @@ class HHAPIManager(APIManager):
         Получает данные по вакансиям
         :return: json-файл по ключу items
         """
-        response = requests.get('https://api.hh.ru/vacancies', params={'text': self.keyword}).json()
-        return self.format_data(response.json().get('items'))
+        response = requests.get('https://api.hh.ru/vacancies', headers={"User-Agent": "HH-User-Agent"},
+                                params={'text': self.keyword}).json()
+        return response
 
-    def format_data(self, response) -> list:
+    def format_data(self) -> list:
         """
         Форматирует полученные по АПИ данные в единый формат
-        :param response: данные из функции get_vacancies
         :return: vacancies: список вакансий в требуемом нам виде
         """
         vacancies = []
         hh_data = self.get_vacancies()
-        for vacancy in hh_data:
-            filtered_vacancies = {'title': vacancy["title"],
-                                  'salary_from': vacancy['salary']["from"],
-                                  'url': vacancy["url"],
-                                  'description': vacancy['snippet']["requirement"]}
+        for vacancy in hh_data['items']:
+            try:
+                filtered_vacancies = {'title': vacancy["title"],
+                                      'salary_from': vacancy['salary']["from"],
+                                      'url': vacancy["alternate_url"],
+                                      'description': vacancy['snippet']["requirement"]}
+            except (KeyError, TypeError, ValueError):
+                filtered_vacancies = {'title': vacancy["name"],
+                                      'salary_from': 0,
+                                      'url': vacancy["alternate_url"],
+                                      'description': vacancy['snippet']["requirement"]}
+
             vac = Vacancy(**filtered_vacancies)
-            vacancies.append(vac.validate_data())
+            vacancies.append(vac)
         return vacancies
 
 
@@ -69,6 +75,7 @@ class SJAPIManager(APIManager):
     """
     Класс для работы с данными с сайта Superjob.ru
     """
+
     def __init__(self, keyword):
         """
         Конструктор класса SJAPIManager
@@ -85,22 +92,27 @@ class SJAPIManager(APIManager):
         headers = {'X-Api-App-Id': api_key}
         response = requests.get('https://api.superjob.ru/2.0/vacancies/',
                                 headers=headers, params={'text': self.keyword}).json()
-        return self.format_data(response.json().get('objects'))
+        return response
 
-    def format_data(self, response) -> list:
+    def format_data(self) -> list:
         """
         Форматирует полученные по АПИ данные в единый формат
-        :param response: данные, полученные в get_vacancies
         :return: parsed_response: список вакансий в требуемом нам виде
         """
         vacancies = []
         sj_data = self.get_vacancies()
-        for vacancy in sj_data:
-            filtered_vacancies = {'title': vacancy["profession"],
-                                  'salary_from': vacancy['payment_from'],
-                                  'url': vacancy["link"],
-                                  'description': vacancy['description']}
-            vac = Vacancy(**filtered_vacancies)
-            vacancies.append(vac.validate_data())
-        return vacancies
+        for vacancy in sj_data['objects']:
+            try:
+                filtered_vacancies = {'title': vacancy["profession"],
+                                      'salary_from': vacancy['payment_from'],
+                                      'url': vacancy["link"],
+                                      'description': vacancy['candidat']}
+            except (KeyError, ValueError, TypeError):
+                filtered_vacancies = {'title': vacancy["profession"],
+                                      'salary_from': 0,
+                                      'url': vacancy["link"],
+                                      'description': vacancy['candidat']}
 
+            vac = Vacancy(**filtered_vacancies)
+            vacancies.append(vac)
+        return vacancies

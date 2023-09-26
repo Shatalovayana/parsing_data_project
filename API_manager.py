@@ -91,7 +91,7 @@ class SJAPIManager(APIManager):
         api_key = os.getenv('api_key_for_SJ')
         headers = {'X-Api-App-Id': api_key}
         response = requests.get('https://api.superjob.ru/2.0/vacancies/',
-                                headers=headers, params={'text': self.keyword}).json()
+                                headers=headers, params={'keyword': self.keyword}).json()
         return response
 
     def format_data(self) -> list:
